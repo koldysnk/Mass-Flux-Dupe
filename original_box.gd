@@ -1,33 +1,55 @@
 extends CharacterBody2D
+@onready var tile_map = $"../TileMap"
 
 
-const SPEED = 300.0
-const JUMP_VELOCITY = -400.0
+
+var is_moving = false
+const SPEED = 5
+var dist_remaining = 0
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity = ProjectSettings.get_setting("physics/2d/default_gravity")
 
 
 func _physics_process(delta):
-	# Add the gravity.
-	#if not is_on_floor():
-		#velocity.y += gravity * delta
+	prints(int(position.x-36)%64,int(position.y-36)%64)
+	if is_moving:
+		move(velocity)
+		prints(position.x,position.y)
+		if velocity.y != 0:
+			if int(position.y-36)%64 == 0:
+				is_moving = false
+		elif velocity.x != 0:
+			if int(position.x-36)%64 == 0:
+				is_moving = false
+	if not is_moving:
+		if Input.is_action_pressed("up"):
+			newMove(Vector2.UP)
+		elif Input.is_action_pressed("left"):
+			newMove(Vector2.LEFT)
+		elif Input.is_action_pressed("right"):
+			newMove(Vector2.RIGHT)
+		elif Input.is_action_pressed("down"):
+			newMove(Vector2.DOWN)
 
-	# Handle up down.
+	
 
-	var direction = Input.get_axis("up", "down")
-	if direction:
-		velocity.y = direction * SPEED
-	else:
-		velocity.y = move_toward(velocity.y, 0, SPEED)
+func newMove(direction: Vector2):
+	var current_tile = tile_map.local_to_map(global_position)
+	var target_tile = Vector2i(current_tile.x+direction.x,current_tile.y+direction.y)
+	
+	if not tile_map.get_cell_tile_data(0,target_tile).get_custom_data("walkable"):
+		return
+	dist_remaining = 64
+	move(direction)
 
-	# Get the input direction and handle the movement/deceleration.
-	# As good practice, you should replace UI actions with custom gameplay actions.
-
-	var direction2 = Input.get_axis("left", "right")
-	if direction2:
-		velocity.x = direction2 * SPEED
-	else:
-		velocity.x = move_toward(velocity.x, 0, SPEED)
-
-	move_and_slide()
+func move(direction: Vector2):
+	position.x += direction[0]*min(SPEED,dist_remaining)
+	position.y += direction[1]*min(SPEED,dist_remaining)
+	
+	velocity.x = direction[0]
+	velocity.y = direction[1]
+	
+	dist_remaining -= SPEED
+	
+	is_moving = true
